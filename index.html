@@ -100,11 +100,11 @@
         uniform vec2 u_imageRes;
         uniform bool u_imageLoaded;
 
-        // Función para simular el comportamiento de "background-size: contain" (mostrar toda la imagen sin cortar)
-        vec2 getContainUv(vec2 uv, vec2 res, vec2 imgRes) {
+        // Función para simular el comportamiento de "background-size: cover" (cubrir toda la pantalla)
+        vec2 getCoverUv(vec2 uv, vec2 res, vec2 imgRes) {
             vec2 ratio = res / imgRes;
-            float minRatio = min(ratio.x, ratio.y); // Cambiado a min para evitar recorte
-            vec2 scaledImgRes = imgRes * minRatio;
+            float maxRatio = max(ratio.x, ratio.y); // Usamos max para que siempre cubra todo
+            vec2 scaledImgRes = imgRes * maxRatio;
             vec2 offset = (scaledImgRes - res) / 2.0;
             return (uv * res + offset) / scaledImgRes;
         }
@@ -137,18 +137,11 @@
             vec4 finalColor = vec4(0.0);
             
             if (u_imageLoaded) {
-                // Obtenemos el UV ajustado para que la imagen se vea completa sin cortar
-                vec2 containUv = getContainUv(refractedUv, resolution, u_imageRes);
+                // Obtenemos el UV ajustado para que la imagen cubra toda la pantalla
+                vec2 coverUv = getCoverUv(refractedUv, resolution, u_imageRes);
                 
-                vec4 texColor;
-                
-                // Verificamos si estamos dentro de los límites de la imagen original
-                if (containUv.x >= 0.0 && containUv.x <= 1.0 && containUv.y >= 0.0 && containUv.y <= 1.0) {
-                    texColor = texture2D(u_image, containUv);
-                } else {
-                    // Fondo negro para las áreas excedentes (letterbox)
-                    texColor = vec4(0.0, 0.0, 0.0, 1.0);
-                }
+                // Leemos el color directamente (ya no necesitamos comprobar los bordes negros)
+                vec4 texColor = texture2D(u_image, coverUv);
                 
                 // Efectos 3D de Luz y Sombra para darle volumen a cada línea vertical
                 // La luz pega más fuerte en un lado de la curva
