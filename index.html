@@ -15,8 +15,11 @@
 </head>
 <body>
 
+    <!-- Logotipo Zeqel -->
+    <img id="mainLogo" src="https://raw.githubusercontent.com/eamxat/Imagenes-Zeqel/e78e9ea4a7f4681aebbd9e34c02e3079c4369129/Zeqel%20Texto%20negro.svg" alt="Zeqel Logo" class="absolute top-4 left-6 z-20 h-8 ui-element transition-opacity duration-300 invert drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">
+
     <!-- Controlador con medidas exactas: 1303px ancho, 30px alto, top 62px -->
-    <div class="absolute left-1/2 -translate-x-1/2 z-10 flex items-center justify-between px-8 bg-black/40 backdrop-blur-lg border border-white/20 rounded-full shadow-2xl"
+    <div id="mainController" class="absolute left-1/2 -translate-x-1/2 z-10 flex items-center justify-between px-8 bg-black/40 backdrop-blur-lg border border-white/20 rounded-full shadow-2xl ui-element transition-opacity duration-300"
          style="top: 62px; width: 1303px; height: 30px;">
         
         <div class="flex items-center gap-3">
@@ -51,6 +54,11 @@
                 <option value="url" class="text-black font-bold">Insertar URL...</option>
             </select>
         </div>
+
+        <!-- Botón de Captura -->
+        <button id="captureBtn" class="bg-white text-black px-4 py-1 rounded text-[11px] font-bold uppercase tracking-widest hover:bg-gray-200 transition shadow-lg ml-2 cursor-pointer">
+            Capturar
+        </button>
 
     </div>
 
@@ -163,7 +171,8 @@
 
     <script>
         const canvas = document.getElementById('glCanvas');
-        const gl = canvas.getContext('webgl');
+        // Usamos preserveDrawingBuffer para garantizar que WebGL nos permita hacer la captura
+        const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
 
         function createShader(gl, type, source) {
             const shader = gl.createShader(type);
@@ -231,7 +240,9 @@
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                // Aseguramos alta calidad tanto para minimizar como para magnificar la textura
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
                 
                 gl.useProgram(program);
                 gl.uniform1i(imageLoadedLoc, 1);
@@ -309,12 +320,36 @@
         const color1Ctrl = document.getElementById('color1');
         const color2Ctrl = document.getElementById('color2');
 
+        // Lógica de Captura y Ocultamiento de UI
+        const captureBtn = document.getElementById('captureBtn');
+        const uiElements = document.querySelectorAll('.ui-element');
+        let captureNextFrame = false;
+
+        // Ocultar/Mostrar UI al hacer clic en el canvas
+        canvas.addEventListener('click', () => {
+            uiElements.forEach(el => {
+                el.classList.toggle('opacity-0');
+                el.classList.toggle('pointer-events-none');
+            });
+        });
+
+        // Solicitar captura al dar clic en el botón
+        captureBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Evita que se oculte la UI
+            captureNextFrame = true;
+        });
+
         function render(time) {
             time *= 0.001;
             
-            if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
+            // Multiplicador de densidad de píxeles (para pantallas de alta resolución)
+            const dpr = window.devicePixelRatio || 1;
+            const targetWidth = Math.floor(window.innerWidth * dpr);
+            const targetHeight = Math.floor(window.innerHeight * dpr);
+            
+            if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
                 gl.viewport(0, 0, canvas.width, canvas.height);
             }
 
@@ -332,6 +367,17 @@
             gl.uniform3f(color2Loc, c2[0], c2[1], c2[2]);
             
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            
+            // Guardar captura si fue solicitada
+            if (captureNextFrame) {
+                const dataURL = canvas.toDataURL("image/png");
+                const link = document.createElement("a");
+                link.download = "Efecto_Refraction_Zeqel.png";
+                link.href = dataURL;
+                link.click();
+                captureNextFrame = false;
+            }
+
             requestAnimationFrame(render);
         }
 
